@@ -1,47 +1,54 @@
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::io::Read;
-use std::io::Write;
+use std::io::{BufRead, BufReader};
+use std::io::{Read, Write};
 use std::process;
 
-fn do_cat(path: String) {
-    let mut file = match File::open(&path) {
-        Ok(file) => file,
-        Err(why) => {
-            write!(
-                std::io::stderr(),
-                "couldn't open {}: {}",
-                path,
-                why.description()
-            );
-            process::exit(1);
-        }
-    };
-
-    let mut contents = String::new();
-    match file.read_to_string(&mut contents) {
-        Ok(_) => {}
-        Err(why) => {
-            write!(
-                std::io::stderr(),
-                "couldn't read: {}: {}",
-                path,
-                why.description()
-            );
-            process::exit(1);
+fn do_cat(reader: &mut BufRead, is_number: bool) {
+    for (idx, line) in reader.lines().enumerate() {
+        if is_number {
+            write!(std::io::stdout(), "{} {}\n", idx, line.unwrap());
+        } else {
+            write!(std::io::stdout(), "{}\n", line.unwrap());
         }
     }
-    write!(std::io::stdout(), "{}", contents);
 }
 fn main() {
-    let argv: Vec<String> = env::args().collect();
-    if argv.len() < 2 {
-        writeln!(std::io::stderr(), "{} file name not given", argv[0]);
-        process::exit(1);
-    }
+    let mut argv: Vec<String> = env::args().collect();
+
+    //parse argument
+    let mut is_number = false;
     for v in &argv[1..] {
-        do_cat(v.to_string());
+        if v == "-n" || v == "--number" {
+            is_number = true;
+        }
+    }
+    argv.retain(|v| v != "-n" && v != "--number");
+
+    //input stdin
+    if argv.len() < 2 {
+        let stdin: std::io::Stdin = std::io::stdin();
+        let mut reader = BufReader::new(stdin);
+        do_cat(&mut reader, is_number);
+    } else {
+        for v in &argv[1..] {
+            match File::open(v.to_string()) {
+                Ok(file) => {
+                    let mut reader = BufReader::new(file);
+                    do_cat(&mut reader, is_number);
+                }
+                Err(why) => {
+                    write!(
+                        std::io::stderr(),
+                        "couldn't open {}: {}",
+                        v,
+                        why.description()
+                    );
+                    process::exit(1);
+                }
+            }
+        }
     }
     process::exit(0);
 }

@@ -32,6 +32,7 @@ extern void read_request_line(struct HTTPRequest *req, FILE *in);
 extern struct HTTPHeaderField *read_header_field(FILE *in);
 extern long content_length(struct HTTPRequest *req);
 extern char *lookup_header_field_value(struct HTTPRequest *req, char *name);
+extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot);
 
 extern void free_requst(struct HTTPRequest *req)
 {
@@ -184,6 +185,22 @@ extern char *lookup_header_field_value(struct HTTPRequest *req, char *name)
         }
     }
     return NULL;
+}
+
+extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot)
+{
+    if (strcmp(req->method, "GET") == 0)
+    {
+        }
+    else if (strcmp(req->method, "HEAD") == 0)
+    {
+    }
+    else if (strcmp(req->method, "POST") == 0)
+    {
+    }
+    else
+    {
+    }
 }
 
 #endif // HTTP_DATA_H

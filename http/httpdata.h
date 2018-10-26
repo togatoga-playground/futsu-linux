@@ -2,9 +2,11 @@
 #define HTTP_DATA_H
 #include <stdio.h>
 #include <memory.h>
+#include <time.h>
 #include "httpconst.h"
 #include "httpsignal.h"
 #include "httpcore.h"
+#include "httpfile.h"
 
 struct HTTPHeaderField;
 struct HTTPRequest;
@@ -33,6 +35,8 @@ extern struct HTTPHeaderField *read_header_field(FILE *in);
 extern long content_length(struct HTTPRequest *req);
 extern char *lookup_header_field_value(struct HTTPRequest *req, char *name);
 extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot);
+extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot);
+extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status);
 
 extern void free_requst(struct HTTPRequest *req)
 {
@@ -191,7 +195,7 @@ extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot)
 {
     if (strcmp(req->method, "GET") == 0)
     {
-        }
+    }
     else if (strcmp(req->method, "HEAD") == 0)
     {
     }
@@ -201,6 +205,38 @@ extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot)
     else
     {
     }
+}
+
+extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
+{
+    struct FileInfo *info;
+    info = get_fileinfo(docroot, req->path);
+    if (!info->ok)
+    {
+        free_fileinfo(info);
+        //not_found
+        return;
+    }
+    output_common_header_fields(req, out, "200 OK");
+    fprintf(out, "Content-Length: %ld\r\n", info->size);
+}
+
+extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)
+{
+    time_t t;
+    struct tm *tm;
+    char buf[TIME_BUF_SIZE];
+    t = time(NULL);
+    tm = gmtime(&t);
+    if (!tm)
+    {
+        log_exit("gmtime() failed: %s", strerror(errno));
+    }
+    strftime(buf, TIME_BUF_SIZE, "%a %d %b %Y %H:%M:%S GMT", tm);
+    fprintf(out, "HTTP/1. %d %s\r\n", HTTP_MINOR_VERSION, status);
+    fprintf(out, "Date: %s\r\n", buf);
+    fprintf(out, "Server: %s/%s\r\n", SERVER_NAME, SERVER_VERSION);
+    fprintf(out, "Connection: close\r\n");
 }
 
 #endif // HTTP_DATA_H

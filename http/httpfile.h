@@ -12,6 +12,7 @@ struct FileInfo
 };
 
 extern struct FileInfo *get_fileinfo(char *docroot, char *urlpath);
+extern void free_fileinfo(struct FileInfo *info);
 static char *build_fspath(char *docroot, char *urlpath);
 
 extern struct FileInfo *get_fileinfo(char *docroot, char *urlpath)
@@ -33,6 +34,12 @@ extern struct FileInfo *get_fileinfo(char *docroot, char *urlpath)
     info->ok = 1;
     info->size = st.st_size;
     return info;
+}
+
+extern void free_fileinfo(struct FileInfo *info)
+{
+    free((void *)info->path);
+    free((void *)info);
 }
 
 static char *build_fspath(char *docroot, char *urlpath)

@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <memory.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "httpconst.h"
 #include "httpsignal.h"
 #include "httpcore.h"
@@ -37,6 +41,7 @@ extern char *lookup_header_field_value(struct HTTPRequest *req, char *name);
 extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot);
 extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot);
 extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status);
+extern char *guess_content_type(struct FileInfo *info);
 
 extern void free_requst(struct HTTPRequest *req)
 {
@@ -195,15 +200,19 @@ extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot)
 {
     if (strcmp(req->method, "GET") == 0)
     {
+        do_file_response(req, out, docroot);
     }
     else if (strcmp(req->method, "HEAD") == 0)
     {
+        do_file_response(req, out, docroot);
     }
     else if (strcmp(req->method, "POST") == 0)
     {
+        //TODO
     }
     else
     {
+        //TODO
     }
 }
 
@@ -219,6 +228,39 @@ extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
     }
     output_common_header_fields(req, out, "200 OK");
     fprintf(out, "Content-Length: %ld\r\n", info->size);
+    fprintf(out, "Content-Type: %s\r\n", guess_content_type(info));
+    fprintf(out, "\r\n");
+    if (strcmp(req->method, "HEAD") != 0)
+    {
+        int fd;
+        char buf[BLOCK_BUF_SIZE];
+        ssize_t n;
+        fd = open(info->path, O_RDONLY);
+        if (fd < 0)
+        {
+            log_exit("failed to open %s: %s", info->path, strerror(errno));
+        }
+        for (;;)
+        {
+            n = read(fd, buf, BLOCK_BUF_SIZE);
+            if (n < 0)
+            {
+                log_exit("failed to read %s: %s", info->path, strerror(errno));
+            }
+            if (n == 0)
+            {
+                break;
+            }
+            int m = fwrite(buf, n, 1, out);
+            if (fwrite(buf, n, 1, out) < 1)
+            {
+                log_exit("failed to write to socket: %s", strerror(errno));
+            }
+        }
+        close(fd);
+    }
+    fflush(out);
+    free_fileinfo(info);
 }
 
 extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)
@@ -237,6 +279,11 @@ extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char
     fprintf(out, "Date: %s\r\n", buf);
     fprintf(out, "Server: %s/%s\r\n", SERVER_NAME, SERVER_VERSION);
     fprintf(out, "Connection: close\r\n");
+}
+extern char *guess_content_type(struct FileInfo *info)
+{
+    char *type = "text/plain";
+    return type;
 }
 
 #endif // HTTP_DATA_H

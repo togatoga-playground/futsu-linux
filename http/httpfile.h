@@ -19,7 +19,7 @@ extern struct FileInfo *get_fileinfo(char *docroot, char *urlpath)
 {
     struct FileInfo *info;
     struct stat st;
-    info = (FileInfo *)xmalloc(sizeof(struct FileInfo));
+    info = xmalloc(sizeof(struct FileInfo));
     info->path = build_fspath(docroot, urlpath);
     info->ok = 0;
 

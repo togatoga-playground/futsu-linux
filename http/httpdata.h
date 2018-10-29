@@ -41,6 +41,7 @@ extern char *lookup_header_field_value(struct HTTPRequest *req, char *name);
 extern void respond_to(struct HTTPRequest *req, FILE *out, char *docroot);
 extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot);
 extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status);
+extern void not_found(struct HTTPRequest *req, FILE *out);
 extern char *guess_content_type(struct FileInfo *info);
 
 extern void free_requst(struct HTTPRequest *req)
@@ -223,7 +224,7 @@ extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
     if (!info->ok)
     {
         free_fileinfo(info);
-        //not_found
+        not_found(req, out);
         return;
     }
     output_common_header_fields(req, out, "200 OK");
@@ -261,6 +262,13 @@ extern void do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
     }
     fflush(out);
     free_fileinfo(info);
+}
+
+extern void not_found(struct HTTPRequest *req, FILE *out)
+{
+    output_common_header_fields(req, out, "404 Not Found");
+    fprintf(out, "Content-Type: text/plain\r\n");
+    fprintf(out, "<html>\n<header><title>Not Found<title></header>\n<body><p>File not found</p></body>\n</html>");
 }
 
 extern void output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)

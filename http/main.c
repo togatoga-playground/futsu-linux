@@ -3,11 +3,12 @@
 #include <getopt.h>
 #include "httpdata.h"
 #include "httpsignal.h"
-
+#include "httpnet.h"
 #define USAGE "Usage: %s [--port=n] [--chroot --user=u --group=g] <docroot>\n"
 static int debug_mode = 0;
 
 static void service(FILE *in, FILE *out, char *docroot);
+static void server_main(int server_fd, char *docroot);
 static struct option longopts[] = {
     {"debug", no_argument, &debug_mode, 1},
     {"chroot", no_argument, NULL, 'c'},
@@ -81,4 +82,34 @@ static void service(FILE *in, FILE *out, char *docroot)
     req = read_request(in);
     respond_to(req, out, docroot);
     free_requst(req);
+}
+
+static void server_main(int server_fd, char *docroot)
+{
+    for (;;)
+    {
+        struct sockaddr_storage addr;
+        socklen_t addrlen = sizeof(addr);
+        int sock;
+        int pid;
+        sock = accept(server_fd, (struct sockaddr *)&addr, &addrlen);
+        if (sock < 0)
+        {
+            log_exit("accept(2) failed: %s", strerror(errno));
+        }
+        pid = fork();
+        if (pid < 0)
+        {
+            exit(3);
+        }
+        if (pid == 0)
+        {
+            /*child*/
+            FILE *inf = fdopen(sock, "r");
+            FILE *outf = fdopen(sock, "w");
+            service(inf, outf, docroot);
+            exit(0);
+        }
+        close(sock);
+    }
 }

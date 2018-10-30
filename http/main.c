@@ -9,6 +9,7 @@ static int debug_mode = 0;
 
 static void service(FILE *in, FILE *out, char *docroot);
 static void server_main(int server_fd, char *docroot);
+static void become_daemon(void);
 static struct option longopts[] = {
     {"debug", no_argument, &debug_mode, 1},
     {"chroot", no_argument, NULL, 'c'},
@@ -111,5 +112,31 @@ static void server_main(int server_fd, char *docroot)
             exit(0);
         }
         close(sock);
+    }
+}
+
+static void become_daemon(void)
+{
+    int n;
+    if (chdir("/") < 0)
+    {
+        log_exit("chdir(2) failed: %s", strerror(errno));
+    }
+    freopen("/dev/null", "r", stdin);
+    freopen("/dev/null", "w", stdout);
+    freopen("/dev/null", "w", stderr);
+
+    n = fork();
+    if (n < 0)
+    {
+        log_exit("fork(2) failed: %s", strerror(errno));
+    }
+    if (n != 0)
+    {
+        _exit(0);
+    }
+    if (setsid() < 0)
+    {
+        log_exit("setsid(2) failed: %s", strerror(errno));
     }
 }
